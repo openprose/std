@@ -1,6 +1,6 @@
 # OpenProse Standard Library
 
-Reusable programs for evaluation, operations, and memory management in OpenProse.
+Reusable programs, patterns, and roles for evaluation, operations, and memory management in OpenProse.
 
 ## Usage
 
@@ -8,6 +8,9 @@ Reusable programs for evaluation, operations, and memory management in OpenProse
 use "std/evals/inspector"
 use "std/ops/profiler"
 use "std/memory/project-memory"
+use "std/composites/worker-critic"
+use "std/controls/pipeline"
+use "std/roles/critic"
 ```
 
 Install with `prose install`. See [deps.md](https://github.com/openprose/prose/blob/main/skills/open-prose/deps.md) for details.
@@ -49,6 +52,50 @@ Services for delivering program outputs to humans and external systems.
 | `slack-notifier` | Format and deliver content to Slack via webhook or API |
 | `email-notifier` | Format and deliver content via email |
 | `dashboard-builder` | Render an HTML dashboard from a template and structured data |
+
+### composites/
+
+Named multi-agent topology patterns for RLM programs.
+
+| Pattern | Purpose |
+|---------|---------|
+| `observer-actor-arbiter` | Three-role OAA composite: observer tracks state, actor proposes actions, arbiter decides |
+| `ensemble-synthesizer` | N-agent ensemble that independently solves then synthesizes into a consensus answer |
+| `worker-critic` | Two-agent loop: worker produces, critic evaluates, repeat until accepted |
+| `ratchet` | Iterative improvement loop with regression prevention |
+| `witness` | Meta-observer composite for recording and reflecting on agent behavior |
+| `dialectic` | Two-agent debate structure producing a synthesized conclusion |
+| `proposer-adversary` | Adversarial proposal testing: proposer generates, adversary stress-tests |
+| `assumption-miner` | Surfaces implicit assumptions in a solution for explicit evaluation |
+| `blind-review` | Independent evaluation without exposure to other agents' assessments |
+| `contrastive-probe` | Generates contrasting solutions to expose decision boundaries |
+| `drift-detector` | Monitors agent behavior over iterations to detect drift from objectives |
+| `stochastic-probe` | Introduces controlled randomness to test solution robustness |
+| `synchronization-probe` | Tests coordination quality between collaborating agents |
+
+### controls/
+
+Flow control patterns for structuring RLM program execution.
+
+| Pattern | Purpose |
+|---------|---------|
+| `pipeline` | Sequential stage pipeline: output of each stage feeds the next |
+| `map-reduce` | Parallel fan-out across inputs followed by aggregation |
+| `gate` | Conditional branching: proceed only if a quality or validity threshold is met |
+| `progressive-refinement` | Iterative solution improvement with expanding scope each round |
+| `retry-with-learning` | Retry loop that accumulates failure context to guide subsequent attempts |
+
+### roles/
+
+Single-agent role guides for use in RLM programs and composites.
+
+| Role | Purpose |
+|---------|---------|
+| `classifier` | Classifies inputs into a fixed set of categories; returns structured label |
+| `critic` | Evaluates a proposed solution against criteria; returns scored feedback |
+| `extractor` | Extracts structured data from unstructured text; returns JSON |
+| `summarizer` | Condenses long content into a concise representation |
+| `verifier` | Checks a solution for correctness against known constraints or test cases |
 
 ### memory/
 
