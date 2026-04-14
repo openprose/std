@@ -2,7 +2,7 @@
 name: map-reduce
 kind: program-node
 role: coordinator
-version: 0.1.0
+version: 0.2.0
 slots: [mapper, reducer]
 delegates: []
 prohibited: []
@@ -13,7 +13,7 @@ state:
 
 # Map-Reduce
 
-Split input, delegate chunks to mappers, merge results with a reducer.
+Split input, delegate chunks to mappers in parallel, merge results with a reducer.
 
 ## Shape
 
@@ -39,6 +39,7 @@ requires:
 ensures:
   - Each mapper receives one chunk and the overall task brief as context
   - Mapper does not know other mappers exist or what chunks they received
+  - All mappers execute in parallel
   - Reducer receives ALL mapper outputs and the overall task brief
   - Reducer reasons about how to merge — handles conflicts and overlaps
   - &controlState.result contains the merged output
@@ -50,13 +51,13 @@ ensures:
 ```javascript
 const { mapper, reducer, task_brief, chunks } = __controlState;
 
-// Map phase — one delegation per chunk
-const mapperResults = [];
-for (let i = 0; i < chunks.length; i++) {
-  const mapBrief = `${task_brief}\n\nProcess this chunk (${i + 1} of ${chunks.length}):\n${typeof chunks[i] === 'string' ? chunks[i] : JSON.stringify(chunks[i])}`;
-  const result = await rlm(mapBrief, null, { use: mapper });
-  mapperResults.push(result);
-}
+// Map phase — all mappers run in parallel
+const mapperResults = await Promise.all(
+  chunks.map((chunk, i) => {
+    const mapBrief = `${task_brief}\n\nProcess this chunk (${i + 1} of ${chunks.length}):\n${typeof chunk === 'string' ? chunk : JSON.stringify(chunk)}`;
+    return rlm(mapBrief, null, { use: mapper });
+  })
+);
 
 // Reduce phase
 const reduceBrief = `Merge these ${mapperResults.length} results into a single coherent output. Handle conflicts and overlaps.\n\nOverall task: ${task_brief}\n\nResults to merge:\n${mapperResults.map((r, i) => `--- Chunk ${i + 1} ---\n${r}`).join("\n\n")}`;
@@ -69,4 +70,8 @@ return(merged);
 
 ## Notes
 
-This is a seed pattern. The parent is responsible for partitioning the input into chunks before delegating to map-reduce. Mappers do not know other mappers exist. The reducer does not know it is part of a map-reduce pipeline. If true parallelism is needed, the map phase can use `Promise.all` — the sandbox supports it.
+The parent is responsible for partitioning the input into chunks before delegating to map-reduce. Mappers do not know other mappers exist. The reducer does not know it is part of a map-reduce pipeline.
+
+Mappers run in parallel by default (`Promise.all`). For sequential execution (e.g., when mappers share rate-limited resources), replace `Promise.all` with a `for` loop — but this sacrifices the primary advantage of map-reduce.
+
+Different from `fan-out`: map-reduce includes a reducer that merges results into a single output. Fan-out returns all results to the parent, which decides how to use them.

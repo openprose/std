@@ -2,7 +2,7 @@
 name: retry-with-learning
 kind: program-node
 role: coordinator
-version: 0.1.0
+version: 0.2.0
 slots: [target]
 delegates: []
 prohibited: []
@@ -33,8 +33,10 @@ requires:
       target: string          -- component name to retry
       task_brief: string      -- the original task
       max_retries: number     -- (optional, default 3)
-      is_failure: function    -- (optional) predicate that takes a result and returns
-                                 true if it should be retried. Default: retry on thrown error.
+      failure_criteria: string -- (optional) declarative description of what constitutes failure.
+                                  The coordinator interprets this against the result.
+                                  e.g., "result contains 'no results found' or is empty"
+                                  Default: retry on thrown error only.
 
 ensures:
   - First attempt: target receives the original brief
@@ -51,7 +53,7 @@ ensures:
 ## Delegation Loop
 
 ```javascript
-const { target, task_brief, max_retries = 3 } = __controlState;
+const { target, task_brief, max_retries = 3, failure_criteria } = __controlState;
 const failures = [];
 
 for (let attempt = 0; attempt < max_retries; attempt++) {
@@ -66,11 +68,20 @@ for (let attempt = 0; attempt < max_retries; attempt++) {
   try {
     const result = await rlm(brief, null, { use: target });
 
-    // Check if the result is considered a failure
-    const isFail = __controlState.is_failure;
-    if (isFail && isFail(result)) {
-      failures.push({ summary: String(result).slice(0, 200), reason: "Result did not meet success criteria" });
-      continue;
+    // Evaluate failure_criteria declaratively against the result
+    if (failure_criteria) {
+      const evalBrief = `Does this result satisfy the failure criteria? Criteria: "${failure_criteria}"\n\nResult:\n${String(result).slice(0, 2000)}\n\nRespond with JSON: { "is_failure": true/false, "reason": "..." }`;
+      const evalResult = await rlm(evalBrief, null, {});
+      try {
+        const jsonMatch = String(evalResult).match(/\{[\s\S]*"is_failure"[\s\S]*\}/);
+        const evaluation = JSON.parse(jsonMatch[0]);
+        if (evaluation.is_failure) {
+          failures.push({ summary: String(result).slice(0, 200), reason: evaluation.reason });
+          continue;
+        }
+      } catch {
+        // If evaluation is unparseable, treat as success — fail open on ambiguity
+      }
     }
 
     __controlState.result = result;
@@ -90,4 +101,10 @@ return(null);
 
 ## Notes
 
-This is a seed pattern. The target component does not know it is being retried. Each invocation looks like a fresh delegation — the failure history appears as context in the brief, not as retry metadata. Different from worker-critic: retry-with-learning uses failure analysis as the signal, worker-critic uses external critique.
+The target component does not know it is being retried. Each invocation looks like a fresh delegation — the failure history appears as context in the brief, not as retry metadata.
+
+The `failure_criteria` parameter is a declarative string, not a function. The coordinator interprets it against the result using natural language evaluation, consistent with Prose's file-based contract model. Examples: `"result contains 'error' or is empty"`, `"result does not include a valid URL"`, `"result has fewer than 3 items"`.
+
+Different from `refine`: retry-with-learning recovers from failure — the result is broken, empty, or wrong. Refinement improves mediocrity — the result exists but is not good enough. Retry passes failure analysis. Refinement passes improvement suggestions. A result that throws an error needs retry. A result that scores 0.4 needs refinement.
+
+Different from `fallback-chain`: retry-with-learning retries the SAME component with enriched context. Fallback-chain tries DIFFERENT components in preference order.

@@ -1,14 +1,43 @@
 ---
 name: contrastive-probe
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [measurement, ranker]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Runs any measurement composite on two candidates independently, then ranks which scores better on the measured dimension.
+slots:
+  - name: measurement
+    primary: true
+    contract:
+      requires: [candidate_config]
+      ensures: [diagnostic_profile]
+  - name: ranker
+    primary: false
+    contract:
+      requires: [profile_a, profile_b, dimension]
+      ensures: [verdict, magnitude, evidence]
+config:
+  dimension:
+    type: string
+    default: null
+    description: The quality being compared (e.g. "clarity", "determinism", "assumption count")
+  candidate_a:
+    type: string
+    default: null
+    description: First candidate configuration
+  candidate_b:
+    type: string
+    default: null
+    description: Second candidate configuration
+  label_a:
+    type: string
+    default: "Candidate A"
+    description: Human label for the first candidate
+  label_b:
+    type: string
+    default: "Candidate B"
+    description: Human label for the second candidate
+invariants:
+  - The same measurement composite runs on both candidates
+  - Candidates are measured in isolation — measurement of A does not influence B
 ---
 
 # Contrastive Probe
@@ -108,6 +137,6 @@ The value is in making qualitative comparisons empirical. "Which of these two pr
 - **Prompt A/B testing**: which prompt is more deterministic (via stochastic-probe)?
 - **Documentation quality comparison**: which version is clearer (via blind-review)?
 - **API surface ranking**: which interface has fewer hidden assumptions (via assumption-miner)?
-- **Vendor evaluation**: which provider's documentation drifts less from their actual API behavior (via synchronization-probe)?
+- **Vendor evaluation**: which provider's documentation drifts less from their actual API behavior (via coherence-probe)?
 
 The meta-composite pattern also means new measurement composites automatically become available as contrastive dimensions without any additional work.

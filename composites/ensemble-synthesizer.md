@@ -1,14 +1,31 @@
 ---
 name: ensemble-synthesizer
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [ensemble_member, synthesizer]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Fans out the same task to K independent agents and synthesizes their results by reasoning about disagreements.
+slots:
+  - name: ensemble_member
+    primary: true
+    contract:
+      requires: [task_brief]
+      ensures: [result text]
+  - name: synthesizer
+    contract:
+      requires: [K member results, original task_brief]
+      ensures: [synthesized result with confidence assessment]
+config:
+  task_brief:
+    type: string
+    default: null
+    description: The task sent identically to every ensemble member
+  ensemble_size:
+    type: integer
+    default: 3
+    description: Number of independent ensemble members to run
+invariants:
+  - All ensemble members receive the identical brief
+  - Synthesizer reasons about disagreements — it does not majority-vote
+  - Ensemble members are unaware of each other
 ---
 
 # Ensemble-Synthesizer

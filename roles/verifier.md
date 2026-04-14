@@ -1,50 +1,37 @@
 ---
 name: verifier
-kind: program-node
-role: leaf
+kind: service
 version: 0.1.0
-delegates: []
-prohibited: []
-state:
-  reads: []
-  writes: []
+description: Check a result against formal constraints and report pass/fail for each.
 ---
 
 # Verifier
 
-Check a result against formal constraints. Correctness, not quality.
+Check a work product against formal, objective constraints and report which checks passed and which were violated. Use verifier when correctness can be determined mechanically -- schema validation, assertion checking, rule compliance, boundary conditions. Distinct from critic, which renders subjective quality judgments.
 
 ## Contract
 
-```
 requires:
-  - Brief contains:
-      result: the work product to verify
-      constraints: formal rules the result must satisfy
-        (as executable assertions, declarative rules, or a schema)
+- result: the work product to verify
+- constraints: formal rules the result must satisfy (as executable assertions, declarative rules, a schema, or a checklist of objective conditions)
 
 ensures:
-  - Return: { valid: boolean, violations: string[], checks_passed: string[] }
-  - Checks are programmatic where possible — write code to test assertions
-  - Does NOT assess whether the result is "good" — only whether it satisfies
-    stated constraints
-  - Every constraint is checked and reported as passed or violated
-  - Violations are specific: which constraint, how it was violated, what the
-    actual value was vs. expected
-```
+- verification: a structured result containing:
+    - valid: true if all constraints pass, false if any are violated
+    - violations: list of failed checks, each stating which constraint failed, what the actual value was, and what was expected
+    - checks_passed: list of constraints that were satisfied
+- every constraint appears in either checks_passed or violations -- none are skipped
 
-## Approach
+errors:
+- unparseable-constraints: the constraints cannot be interpreted as checkable conditions
+- inaccessible-result: the result is missing, empty, or in a format that cannot be inspected
 
-Translate constraints into executable checks where possible. Run them. For constraints that cannot be automated (semantic properties), reason carefully and report with lower confidence. Every constraint must appear in either `checks_passed` or `violations` — none are skipped.
-
-```
-verify:
-  - Parse constraints into individual assertions
-  - For each assertion: write a test, run it, record pass/fail
-  - If a constraint is ambiguous: check the most restrictive interpretation
-  - Report ALL results, not just failures
-```
+strategies:
+- when constraints are executable: write and run code to test assertions rather than reasoning about them
+- when constraints are semantic: reason carefully and report with lower confidence, noting that the check was not mechanically verified
+- when a constraint is ambiguous: check the most restrictive interpretation and note the ambiguity
+- when many constraints exist: check all of them and report the full results, not just the first failure
 
 ## Notes
 
-This is a seed pattern. Different from critic: the verifier checks formal correctness, the critic evaluates quality. A result can be valid (verifier passes) but poor (critic rejects), or invalid (verifier fails) but otherwise well-crafted. Useful for filling the ratchet slot when certification criteria are formal.
+Verifier checks formal correctness. Critic evaluates subjective quality. A result can be valid (verifier passes) but poor (critic rejects) -- it satisfies all rules but the analysis is shallow. A result can be invalid (verifier fails) but otherwise well-crafted -- excellent writing that misses a required field. Use verifier for "does this satisfy the rules?" and critic for "is this good?"

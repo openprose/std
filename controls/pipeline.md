@@ -2,8 +2,8 @@
 name: pipeline
 kind: program-node
 role: coordinator
-version: 0.1.0
-slots: []
+version: 0.2.0
+slots: [stages]
 delegates: []
 prohibited: []
 state:
@@ -63,4 +63,4 @@ return(currentInput);
 
 ## Notes
 
-This is a seed pattern. No stage knows it is part of a pipeline. Each receives input and produces output. The isolation between stages is the structural guarantee — each stage operates on a clean interface defined solely by its predecessor's output. If stage 3 needs information from stage 1, insert an intermediate stage that carries it forward, or restructure the pipeline.
+No stage knows it is part of a pipeline. Each receives input and produces output. The isolation between stages is the structural guarantee — each stage operates on a clean interface defined solely by its predecessor's output. If stage 3 needs information from stage 1, insert an intermediate stage that carries it forward, or restructure the pipeline.

@@ -1,14 +1,39 @@
 ---
 name: stochastic-probe
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [probe, analyst]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Run the same agent on identical inputs N times; variance in responses measures how much the material underdetermines interpretation.
+slots:
+  - name: probe
+    primary: true
+    contract:
+      requires: [task_brief, material]
+      ensures: [response]
+  - name: analyst
+    primary: false
+    contract:
+      requires: [responses]
+      ensures: [analysis]
+config:
+  sample_size:
+    type: number
+    default: 7
+    description: Number of identical probe runs
+  model:
+    type: string
+    default: null
+    description: Model tier to probe at — fixing the tier isolates material variance from capability variance
+  task_brief:
+    type: string
+    default: null
+    description: The question to pose against the material
+  material:
+    type: string
+    default: null
+    description: The corpus or artifact to examine
+invariants:
+  - All N runs receive identical inputs — same brief, same material, same model
+  - Temperature and sampling inherent to the model are the only source of variation
 ---
 
 # Stochastic Probe

@@ -1,8 +1,8 @@
 ---
-name: progressive-refinement
+name: refine
 kind: program-node
 role: coordinator
-version: 0.1.0
+version: 0.2.0
 slots: [refiner, evaluator]
 delegates: []
 prohibited: []
@@ -11,7 +11,7 @@ state:
   writes: [&controlState]
 ---
 
-# Progressive Refinement
+# Refine
 
 Iteratively improve a result through delegation rounds until a quality threshold is met.
 
@@ -88,4 +88,6 @@ return(currentResult);
 
 ## Notes
 
-This is a seed pattern. The refiner does not know it is in a refinement loop. The evaluator does not know its score controls iteration. Different from worker-critic: progressive-refinement accumulates improvement across rounds with a continuous score. Worker-critic is binary accept/reject.
+The refiner does not know it is in a refinement loop. The evaluator does not know its score controls iteration.
+
+Different from `retry-with-learning`: refinement improves work that is mediocre — the result exists but is not good enough. Retry-with-learning recovers from failure — the result is broken or absent. Refinement uses a continuous quality score (0..1) and improvement suggestions. Retry uses binary failure detection and failure analysis. A result that scores 0.4 needs refinement. A result that throws an error or returns nothing needs retry.

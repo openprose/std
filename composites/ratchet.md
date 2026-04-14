@@ -1,19 +1,41 @@
 ---
 name: ratchet
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [advancer, ratchet]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Advancer proposes incremental steps; certifier validates each one; certified progress is never rolled back.
+slots:
+  - name: advancer
+    primary: true
+    contract:
+      requires: [task_brief, certified_progress, rejection feedback (if prior rejection)]
+      ensures: [proposed next step]
+  - name: certifier
+    contract:
+      requires: [task_brief, certified_progress, proposed step]
+      ensures: [certify or reject verdict]
+config:
+  task_brief:
+    type: string
+    default: null
+    description: The goal to advance toward
+  max_steps:
+    type: integer
+    default: 5
+    description: Maximum advancement attempts
+  certified_progress:
+    type: array
+    default: []
+    description: Prior certified steps to resume from
+invariants:
+  - Progress is monotonic — the certified_progress array only grows, never shrinks
+  - The advancer does not know a certifier will evaluate its proposals
+  - The certifier does not know its verdicts drive a retry loop
+  - Rejected steps are discarded, never appended to certified progress
 ---
 
 # Ratchet
 
-Advancer proposes steps, ratchet certifies. Certified progress is never rolled back.
+Advancer proposes steps, certifier validates. Certified progress is never rolled back.
 
 ## Shape
 
@@ -22,7 +44,7 @@ shape:
   self: [manage the advance-certify loop, maintain certified progress log]
   delegates:
     advancer: [propose the next incremental step]
-    ratchet: [certify or reject the proposed step]
+    certifier: [certify or reject the proposed step]
   prohibited: none
 ```
 
@@ -32,14 +54,14 @@ shape:
 requires:
   - &compositeState exists at __compositeState with:
       advancer: string             -- component name for the advancer
-      ratchet: string              -- component name for the ratchet/certifier
+      certifier: string            -- component name for the certifier
       task_brief: string           -- the overall goal
       max_steps: number            -- (optional, default 5)
       certified_progress: any[]    -- (optional, default []) — prior certified steps
 
 ensures:
   - Advancer receives the task brief plus all certified progress so far
-  - Ratchet receives the proposed step and decides: certify or reject
+  - Certifier receives the proposed step and decides: certify or reject
   - Certified steps are appended to &compositeState.certified_progress — never removed
   - Rejected steps are discarded — advancer receives the rejection reason and proposes differently
   - Progress is monotonic: the certified_progress array only grows
@@ -49,7 +71,7 @@ ensures:
 ## Delegation Loop
 
 ```javascript
-const { advancer, ratchet, task_brief, max_steps = 5 } = __compositeState;
+const { advancer, certifier, task_brief, max_steps = 5 } = __compositeState;
 let certified = __compositeState.certified_progress || [];
 let consecutiveRejects = 0;
 
@@ -62,9 +84,9 @@ for (let step = 0; step < max_steps; step++) {
 
   const proposal = await rlm(advancerBrief, null, { use: advancer });
 
-  // Ratchet certifies
-  const ratchetBrief = `Evaluate this proposed step. Does it maintain all invariants? Does it advance toward the goal? Is it consistent with prior certified progress?\n\nGoal: ${task_brief}\nCertified progress: ${JSON.stringify(certified)}\n\nProposed step:\n${proposal}`;
-  const verdict = await rlm(ratchetBrief, null, { use: ratchet });
+  // Certifier validates
+  const certifierBrief = `Evaluate this proposed step. Does it maintain all invariants? Does it advance toward the goal? Is it consistent with prior certified progress?\n\nGoal: ${task_brief}\nCertified progress: ${JSON.stringify(certified)}\n\nProposed step:\n${proposal}`;
+  const verdict = await rlm(certifierBrief, null, { use: certifier });
 
   const verdictStr = String(verdict).toLowerCase();
   if (/certif|accept|approve/.test(verdictStr)) {
@@ -82,4 +104,4 @@ return(certified);
 
 ## Notes
 
-This is a seed pattern. The advancer does not know a ratchet will evaluate its proposals. The ratchet does not know its verdicts drive a retry loop. The structural guarantee is monotonic progress — once a step is certified, it is committed. This is valuable when rollback is expensive or when partial progress must be preserved across failures.
+The advancer does not know a certifier will evaluate its proposals. The certifier does not know its verdicts drive a retry loop. The structural guarantee is monotonic progress — once a step is certified, it is committed. This is valuable when rollback is expensive or when partial progress must be preserved across failures.

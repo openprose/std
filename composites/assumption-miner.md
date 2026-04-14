@@ -1,14 +1,35 @@
 ---
 name: assumption-miner
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [miner, comparator]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Heterogeneous agents independently surface unstated assumptions; cross-tier disagreement reveals hidden dependencies.
+slots:
+  - name: miner
+    primary: true
+    contract:
+      requires: [material, context]
+      ensures: [assumptions]
+  - name: comparator
+    primary: false
+    contract:
+      requires: [assumption_lists_by_tier]
+      ensures: [classified_assumption_map]
+config:
+  tiers:
+    type: object[]
+    default: [{ model: "opus", count: 3 }, { model: "sonnet", count: 2 }]
+    description: Miner configurations specifying model tier and count per tier
+  material:
+    type: string
+    default: null
+    description: The corpus or artifact to examine for unstated assumptions
+  context:
+    type: string
+    default: null
+    description: Optional domain context to help miners distinguish assumptions from common knowledge
+invariants:
+  - Each miner receives the same material and identical instructions
+  - Miners work independently — no miner sees another's output
 ---
 
 # Assumption Miner

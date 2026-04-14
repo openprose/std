@@ -1,14 +1,27 @@
 ---
 name: proposer-adversary
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [proposer, adversary]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: One agent proposes, another attacks the proposal, and the unresolved tension is returned for the parent to judge.
+slots:
+  - name: proposer
+    primary: true
+    contract:
+      requires: [task_brief]
+      ensures: [proposal text]
+  - name: adversary
+    contract:
+      requires: [proposal, original task_brief]
+      ensures: [attack identifying flaws, edge cases, and counterexamples]
+config:
+  task_brief:
+    type: string
+    default: null
+    description: What the proposer should propose on
+invariants:
+  - The composite does not resolve the tension — it returns both proposal and attack
+  - Proposer is unaware it will be attacked
+  - Adversary is unaware its output will be weighed against the proposal
 ---
 
 # Proposer-Adversary

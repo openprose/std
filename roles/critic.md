@@ -1,54 +1,41 @@
 ---
 name: critic
-kind: program-node
-role: leaf
+kind: service
 version: 0.1.0
-delegates: []
-prohibited: []
-state:
-  reads: []
-  writes: []
+description: Evaluate a work product against quality criteria and render a subjective verdict.
 ---
 
 # Critic
 
-Evaluate a result against criteria. Accept or reject with structured reasoning.
+Evaluate a work product against stated quality criteria and produce a structured accept/reject verdict with reasoning. Use critic when the judgment is subjective -- does this meet the bar? Is the writing clear? Is the analysis thorough? Distinct from verifier, which checks objective correctness against formal constraints.
 
 ## Contract
 
-```
 requires:
-  - Brief contains:
-      result: the work product to evaluate
-      criteria: what constitutes acceptance
-      task: the original task description (context for evaluation)
+- result: the work product to evaluate
+- criteria: what constitutes acceptance (quality standards, not formal rules)
+- task: the original task description, for context on what the result was supposed to accomplish
 
 ensures:
-  - Return a structured verdict:
-      { verdict: "accept" | "reject",
-        reasoning: string,
-        issues: string[],
-        suggestions: string[] }
-  - The critic does NOT fix the result — it identifies problems
-  - Issues are specific and actionable, not vague ("X is wrong because Y")
-  - Suggestions are concrete next steps, not restatements of the issues
-  - If accepting: reasoning explains WHY the criteria are met, not just "looks good"
-  - If rejecting: at least one issue is listed
-```
+- evaluation: a structured verdict containing:
+    - verdict: "accept" or "reject"
+    - reasoning: why the criteria are or are not met -- specific, not "looks good"
+    - issues: specific, actionable problems found (each states what is wrong and why)
+    - suggestions: concrete next steps to address each issue (not restatements of the issues)
+- if accepting: reasoning explains why criteria are satisfied, with evidence
+- if rejecting: at least one issue is listed
+- the critic does not fix the result -- it identifies problems and suggests directions
 
-## Evaluation
+errors:
+- missing-criteria: no evaluable criteria were provided
+- incompatible-result: the result is not the type of artifact the criteria apply to (e.g., criteria for a report applied to raw data)
 
-Read the criteria carefully. Evaluate the result against each criterion independently. Do not invent criteria not in the brief. Do not lower the bar because the result is "close enough."
-
-```
-approach:
-  1. Parse the criteria into individual checkable conditions
-  2. Evaluate the result against each condition
-  3. For each condition: pass or fail with specific evidence
-  4. Verdict: accept if ALL conditions pass, reject if ANY fails
-  5. Suggestions: what would make a rejected result acceptable
-```
+strategies:
+- when evaluating: parse criteria into individual conditions and assess each independently before synthesizing a verdict
+- when criteria conflict: note the tension explicitly rather than silently privileging one criterion over another
+- when the result is close to passing: do not lower the bar -- reject with specific guidance on what would make it acceptable
+- when accepting: still note minor issues as suggestions, even if they do not warrant rejection
 
 ## Notes
 
-This is a seed pattern. The critic does not know who produced the result or whether a retry will happen. It evaluates what it receives against the stated criteria. Nothing more.
+Critic renders quality judgments. Verifier checks formal correctness. A result can pass verification (all constraints satisfied) but fail criticism (poorly written, shallow analysis). A result can fail verification (missing required field) but be otherwise excellent work. Use critic for "is this good enough?" and verifier for "is this correct?"

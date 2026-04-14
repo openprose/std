@@ -1,14 +1,36 @@
 ---
 name: worker-critic
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [worker, critic]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Iteratively refines a worker's output by looping through critic evaluation until acceptance or budget exhaustion.
+slots:
+  - name: worker
+    primary: true
+    contract:
+      requires: [task_brief, optional critique from previous attempt]
+      ensures: [result text]
+  - name: critic
+    contract:
+      requires: [worker result, original task_brief, criteria]
+      ensures: [structured verdict with accept/reject, reasoning, issues, suggestions]
+config:
+  task_brief:
+    type: string
+    default: null
+    description: The task to pass to the worker
+  criteria:
+    type: string
+    default: null
+    description: Acceptance criteria the critic evaluates against
+  max_rounds:
+    type: integer
+    default: 3
+    description: Maximum number of worker-critic cycles before returning best attempt
+invariants:
+  - Worker never sees the raw criteria — only the critique derived from them
+  - Critic always receives the original task brief alongside the result
+  - On accept the loop exits immediately and returns the worker's result
+  - After max_rounds exhausted the final attempt is returned with its critique
 ---
 
 # Worker-Critic
@@ -35,7 +57,7 @@ requires:
       critic: string        -- component name to use as critic
       task_brief: string    -- the task to pass to the worker
       criteria: string      -- acceptance criteria for the critic
-      max_retries: number   -- (optional, default 3)
+      max_rounds: number    -- (optional, default 3)
 
 ensures:
   - Worker receives only the task brief (first attempt) or task brief + critique (retries)
@@ -43,7 +65,7 @@ ensures:
   - Critic returns { verdict: "accept" | "reject", reasoning, issues, suggestions }
   - On reject: worker receives the critique as learning signal — not the raw task repeated
   - On accept: return the worker's result immediately
-  - After max_retries exhausted: return the best attempt with the final critique
+  - After max_rounds exhausted: return the best attempt with the final critique
   - &compositeState.result contains the final output
   - &compositeState.attempts contains the count
 ```
@@ -51,11 +73,11 @@ ensures:
 ## Delegation Loop
 
 ```javascript
-const { worker, critic, task_brief, criteria, max_retries = 3 } = __compositeState;
+const { worker, critic, task_brief, criteria, max_rounds = 3 } = __compositeState;
 let lastResult = null;
 let lastCritique = null;
 
-for (let attempt = 0; attempt < max_retries; attempt++) {
+for (let attempt = 0; attempt < max_rounds; attempt++) {
   // Build worker brief
   let workerBrief = task_brief;
   if (lastCritique) {
@@ -82,7 +104,7 @@ for (let attempt = 0; attempt < max_retries; attempt++) {
 }
 
 __compositeState.result = lastResult;
-__compositeState.attempts = max_retries;
+__compositeState.attempts = max_rounds;
 __compositeState.final_critique = lastCritique;
 return(lastResult);
 ```

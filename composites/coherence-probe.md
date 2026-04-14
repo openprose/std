@@ -1,17 +1,46 @@
 ---
-name: synchronization-probe
-kind: program-node
-role: coordinator
+name: coherence-probe
+kind: composite
 version: 0.1.0
-slots: [reader, sync_analyst]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Detects drift between two corpora by having independent readers predict what the counterpart should say, then classifying where predictions fail.
+slots:
+  - name: reader
+    primary: true
+    contract:
+      requires: [corpus, counterpart_label]
+      ensures: [prediction]
+  - name: sync_analyst
+    primary: false
+    contract:
+      requires: [predictions, actuals, labels]
+      ensures: [bidirectional_drift_report]
+config:
+  readers_per_direction:
+    type: number
+    default: 3
+    description: How many independent readers per direction (A→B and B→A)
+  corpus_a:
+    type: string
+    default: null
+    description: First corpus to compare
+  corpus_b:
+    type: string
+    default: null
+    description: Second corpus to compare
+  label_a:
+    type: string
+    default: "Corpus A"
+    description: Human label for the first corpus
+  label_b:
+    type: string
+    default: "Corpus B"
+    description: Human label for the second corpus
+invariants:
+  - Readers of corpus A never see corpus B, and vice versa
+  - Analysis is bidirectional — A→B drift is a separate finding from B→A drift
 ---
 
-# Synchronization Probe
+# Coherence Probe
 
 Two corpora that should describe the same system are read independently. Agents that read corpus A predict what corpus B should say, and vice versa. Where predictions fail, the corpora have drifted.
 
@@ -123,4 +152,4 @@ return(analysis);
 
 ## Notes
 
-This is a seed pattern. Readers of one corpus never see the other — their predictions are based entirely on what they read. The sync analyst does not know it is part of a synchronization probe. The structural insight is that *prediction failure is more informative than direct comparison*. A diff between two documents tells you they differ. A prediction failure tells you they differ *in ways that a reader of one would not expect given the other* — which is the meaningful kind of drift. Two documents can differ extensively in wording while remaining synchronized, and they can appear similar while harboring subtle contradictions. The prediction layer catches the latter.
+This is a seed pattern. Readers of one corpus never see the other — their predictions are based entirely on what they read. The sync analyst does not know it is part of a coherence probe. The structural insight is that *prediction failure is more informative than direct comparison*. A diff between two documents tells you they differ. A prediction failure tells you they differ *in ways that a reader of one would not expect given the other* — which is the meaningful kind of drift. Two documents can differ extensively in wording while remaining synchronized, and they can appear similar while harboring subtle contradictions. The prediction layer catches the latter.

@@ -1,14 +1,40 @@
 ---
 name: blind-review
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [reviewer, comparator]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Heterogeneous reviewers build understanding progressively; cross-tier divergence diagnoses clarity, complexity, and ambiguity.
+slots:
+  - name: reviewer
+    primary: true
+    contract:
+      requires: [task_brief, material]
+      ensures: [report]
+  - name: comparator
+    primary: false
+    contract:
+      requires: [staged_reports_by_tier]
+      ensures: [analysis]
+config:
+  tiers:
+    type: object[]
+    default: [{ model: "opus", count: 3 }, { model: "sonnet", count: 3 }, { model: "haiku", count: 3 }]
+    description: Reviewer configurations specifying model tier and count per tier
+  materials:
+    type: string[]
+    default: null
+    description: Ordered list of materials to disclose progressively
+  task_brief:
+    type: string
+    default: null
+    description: What reviewers should focus on when examining materials
+  output_dir:
+    type: string
+    default: null
+    description: Optional directory for reviewer reports
+invariants:
+  - Reviewers are independent — no reviewer sees another's output
+  - Materials are disclosed one at a time, in order, to each reviewer
+  - Reviewers across different tiers receive identical materials and briefs
 ---
 
 # Blind Review

@@ -1,14 +1,32 @@
 ---
 name: dialectic
-kind: program-node
-role: coordinator
+kind: composite
 version: 0.1.0
-slots: [thesis, antithesis]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Thesis and antithesis argue opposing positions; the unresolved tension is the output.
+slots:
+  - name: thesis
+    primary: false
+    contract:
+      requires: [task_brief, prior antithesis argument (if not first round)]
+      ensures: [argument for the position]
+  - name: antithesis
+    primary: false
+    contract:
+      requires: [task_brief, prior thesis argument]
+      ensures: [argument against the position]
+config:
+  task_brief:
+    type: string
+    default: null
+    description: The question or topic for debate
+  rounds:
+    type: integer
+    default: 2
+    description: Number of exchange rounds
+invariants:
+  - Neither agent knows it is part of a dialectic
+  - The full exchange is the output — the composite never resolves the tension
+  - Each agent sees only the other's prior argument, not its reasoning
 ---
 
 # Dialectic

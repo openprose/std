@@ -12,16 +12,22 @@ shape:
 requires:
 - content: the output to review
 - gate_level: one of "all", "external", "none"
-- review_channel: where to present — e.g. Slack channel or email
+- review_channel: where to present the review request — e.g. Slack channel ID or email address
 
 ensures:
-- approved: boolean
-- feedback: optional modifications or notes from reviewer. If gate_level is "none", approved is always true with no review.
+- approved: boolean — true if the reviewer approved, or if gate_level is "none" (auto-approved without review)
+- feedback: (optional) structured edits from the reviewer, suitable for `apply(content, feedback)` — present only when the reviewer provides modifications
+- if gate_level is "none": approved is true immediately with no human review and no feedback
 
-environment:
-- REVIEW_CHANNEL: default channel for posting review requests, provided by the runtime
+errors:
+- reviewer-timeout: the reviewer did not respond within the configured review window
+- channel-unreachable: the review channel could not be contacted (invalid channel, permissions issue, or service unavailable)
+
+invariants:
+- content substance is preserved unless feedback explicitly modifies it
+- when gate_level is "all" or "external", a human must have explicitly approved before approved is true
 
 strategies:
-- when gate_level is "all": post every output for review
+- when gate_level is "all": post every output for review, block until the reviewer responds
 - when gate_level is "external": only review content that will be sent outside the org (outreach emails, reports to customers)
-- when gate_level is "none": skip review entirely (pass-through)
+- when gate_level is "none": skip review entirely — return approved: true with no feedback

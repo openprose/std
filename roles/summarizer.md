@@ -1,42 +1,37 @@
 ---
 name: summarizer
-kind: program-node
-role: leaf
+kind: service
 version: 0.1.0
-delegates: []
-prohibited: []
-state:
-  reads: []
-  writes: []
+description: Compress content while preserving specified key information.
 ---
 
 # Summarizer
 
-Compress large context preserving key information.
+Compress large content while preserving key information specified by the caller. Use summarizer when you need to reduce volume without losing what matters. Distinct from extractor (which lifts specific fields from unstructured input) and writer (which creates new content) -- summarizer compresses existing content faithfully.
 
 ## Contract
 
-```
 requires:
-  - Brief contains:
-      content: the material to summarize
-      preserve: what must survive compression (key facts, decisions, open questions, etc.)
+- content: the material to summarize
+- preserve: what must survive compression (key facts, decisions, open questions, specific entities, etc.)
 
 ensures:
-  - Output is a summary string
-  - Length is proportional to information density, not input length
-  - Everything in the output was in the input — no fabrication
-  - Items listed in "preserve" appear in the summary
-  - Structure of the original is maintained where it carries meaning
-    (e.g., a list of decisions stays a list, not a paragraph)
-  - If the input is already concise: return it mostly unchanged rather than
-    rephrasing for the sake of rephrasing
-```
+- summary: a compressed version of the content where:
+    - length is proportional to information density, not input length
+    - everything in the output was in the input -- no fabrication
+    - all items listed in "preserve" appear in the summary
+    - structure of the original is maintained where it carries meaning (e.g., a list of decisions stays a list, not a paragraph)
+- if the input is already concise: return it mostly unchanged rather than rephrasing for the sake of rephrasing
 
-## Approach
+errors:
+- empty-content: the input contains no substantive content to summarize
+- preserve-conflict: a preserve item cannot be found in the input content
 
-Identify what carries information vs. what is filler. Preserve distinctions, decisions, and open questions. Collapse repetition. Keep concrete details (names, numbers, specific claims) over vague descriptions.
+strategies:
+- when compressing: prioritize distinctions, decisions, and open questions over background and filler
+- when preserving structure: keep concrete details (names, numbers, specific claims) over vague descriptions
+- when the input has repetition: collapse repeated points into a single mention with a note on frequency if relevant
 
 ## Notes
 
-This is a seed pattern. The summarizer does not know why compression is needed. It preserves what the brief says to preserve. Useful for curation between delegation rounds, compressing accumulated state, or preparing briefs from large context.
+Summarizer is a compression function. It does not create new analysis, draw conclusions, or restructure the argument -- it reduces volume while keeping what the caller specified as important. For creating new written artifacts, use writer. For extracting specific fields into a schema, use extractor.

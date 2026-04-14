@@ -50,8 +50,11 @@ Services for delivering program outputs to humans and external systems.
 |---------|---------|
 | `human-gate` | Present output for human review, block until approved or rejected |
 | `slack-notifier` | Format and deliver content to Slack via webhook or API |
-| `email-notifier` | Format and deliver content via email |
-| `dashboard-builder` | Render an HTML dashboard from a template and structured data |
+| `email-notifier` | Send an HTML email via a configured email provider (Resend, SendGrid, Postmark, SES, SMTP) |
+| `email-renderer` | Render structured report data into a branded, email-safe HTML string |
+| `html-renderer` | Render an HTML document from a template and structured data |
+| `webhook-notifier` | Deliver content to an HTTP endpoint via webhook |
+| `file-writer` | Write content to a local, S3, or GCS destination |
 
 ### composites/
 

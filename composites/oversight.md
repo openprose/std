@@ -1,17 +1,39 @@
 ---
-name: observer-actor-arbiter
-kind: program-node
-role: coordinator
+name: oversight
+kind: composite
 version: 0.1.0
-slots: [actor, observer, arbiter]
-delegates: []
-prohibited: []
-state:
-  reads: [&compositeState]
-  writes: [&compositeState]
+description: Actor executes, observer independently analyzes outcomes, arbiter decides whether to continue, adjust, or abort.
+slots:
+  - name: actor
+    primary: true
+    contract:
+      requires: [task_brief, adjustment (if prior cycle was adjusted)]
+      ensures: [execution outcome]
+  - name: observer
+    contract:
+      requires: [task_brief, actor outcome]
+      ensures: [independent analysis of the outcome]
+  - name: arbiter
+    contract:
+      requires: [task_brief, observer report]
+      ensures: [decision: continue, adjust, or abort]
+config:
+  task_brief:
+    type: string
+    default: null
+    description: The task for the actor to perform
+  max_cycles:
+    type: integer
+    default: 3
+    description: Maximum oversight cycles
+invariants:
+  - The observer sees only the outcome, never the actor's reasoning or self-assessment
+  - The actor does not know an observer is watching
+  - The observer does not know an arbiter will act on its report
+  - The arbiter decides solely from the observer's report, not from the actor
 ---
 
-# Observer-Actor-Arbiter
+# Oversight
 
 Actor acts, observer watches outcomes independently, arbiter decides next step based on the observer's report — not the actor's self-assessment.
 
@@ -89,4 +111,4 @@ return(lastOutcome);
 
 ## Notes
 
-This is a seed pattern. The actor does not know an observer is watching. The observer does not know an arbiter will act on its report. The information firewall between actor and observer is the structural guarantee — the observer's assessment cannot be contaminated by the actor's rationalization.
+The actor does not know an observer is watching. The observer does not know an arbiter will act on its report. The information firewall between actor and observer is the structural guarantee — the observer's assessment cannot be contaminated by the actor's rationalization.
